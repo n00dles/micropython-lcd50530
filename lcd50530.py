@@ -1,4 +1,3 @@
-
 import utime
 import machine
 
@@ -42,6 +41,7 @@ class LCD50530:
     LCD_CURSORMOVEREAD = 0x08		# Update cursor address after reading RAM data
     LCD_CURSORMOVEWRITE = 0x10	# Update cursor address after writing RAM data
 
+
     LCD_DISPLAYMOVERIGHT = 0x00	# Display address decremented after instruction
     LCD_DISPLAYMOVELEFT = 0x04	# Display address incremented after instruction
     LCD_CURSORMOVELEFT = 0x20		# Cursor address decremented after instruction
@@ -70,10 +70,10 @@ class LCD50530:
     LCD_SHIFTLEFT = 0x01
     LCD_SHIFTRIGHT = 0x00
 
-    _ioc1_pin = 0 # LOW: command.  HIGH: character.
-    _ioc2_pin = 0 # LOW: command.  HIGH: character.
-    _rw_pin = 0   # LOW: write to LCD.  HIGH: read from LCD.
-    _ex_pin = 0   # activated by a HIGH pulse.
+    _ioc1_pin = 0 # 0: command.  1: character.
+    _ioc2_pin = 0 # 0: command.  1: character.
+    _rw_pin = 0   # 0: write to LCD.  1: read from LCD.
+    _ex_pin = 0   # activated by a 1 pulse.
     _data_pins = [0,0,0,0] 
 
     _functionmode = 0
@@ -97,26 +97,99 @@ class LCD50530:
         self._data_pins[2] = d6
         self._data_pins[3] = d7 
 
-        self.setPins(1)
+        self.setDDRD(0b11111111)
 
         #DDRD = B11111111     # Default: Set all ports to output (Atmel shortcut)    
 
         print (self._data_pins)
 
-    def setPins(self,state = 1):  
+    def setDDRD(self,state = 1):  
         if (state==1):
             state = machine.Pin.OUT
         else: 
             state = machine.Pin.IN
+        if (state & 128):
+            self.ioc1 = machine.Pin(self._ioc1_pin, machine.Pin.OUT)
+        else: 
+            self.ioc1 = machine.Pin(self._ioc1_pin, machine.Pin.IN)
         
-        self.ioc1 = machine.Pin(self._ioc1_pin, state)
-        self.ioc2 = machine.Pin(self._ioc2_pin, state)
-        self.rw = machine.Pin(self._rw_pin, state)
-        self.ex = machine.Pin(self._ex_pin, state)
-        self.data1 = machine.Pin(self._data_pins[0], state)
-        self.data2 = machine.Pin(self._data_pins[1], state)
-        self.data3 = machine.Pin(self._data_pins[2], state)
-        self.data4 = machine.Pin(self._data_pins[3], state)
+        if (state & 64):
+            self.ioc2 = machine.Pin(self._ioc2_pin, machine.Pin.OUT)
+        else:
+            self.ioc2 = machine.Pin(self._ioc2_pin, machine.Pin.IN)
+
+        if (state & 32):
+            self.rw = machine.Pin(self._rw_pin, machine.Pin.OUT)
+        else: 
+            self.rw = machine.Pin(self._rw_pin, machine.Pin.IN)
+
+        if (state & 16):    
+            self.ex = machine.Pin(self._ex_pin, machine.Pin.OUT)
+        else: 
+            self.ex = machine.Pin(self._ex_pin, machine.Pin.IN)
+
+        if (state & 8):
+            self.data1 = machine.Pin(self._data_pins[0], machine.Pin.OUT)
+        else: 
+            self.data1 = machine.Pin(self._data_pins[0], machine.Pin.IN)
+
+        if (state & 4):
+            self.data2 = machine.Pin(self._data_pins[1], machine.Pin.OUT)
+        else: 
+            self.data2 = machine.Pin(self._data_pins[1], machine.Pin.IN)
+
+        if (state & 2): 
+            self.data3 = machine.Pin(self._data_pins[2], machine.Pin.OUT)
+        else: 
+            self.data3 = machine.Pin(self._data_pins[2], machine.Pin.IN)
+
+        if (state & 1):
+            self.data4 = machine.Pin(self._data_pins[3], machine.Pin.OUT)
+        else: 
+            self.data4 = machine.Pin(self._data_pins[3], machine.Pin.IN)
+
+    def setPORTD(self,state = 1):  
+        if (state & 128):
+            self.ioc1(1)
+        else: 
+            self.ioc1(0)
+        
+        if (state & 64):
+            self.ioc2(1)
+        else:
+            self.ioc2(0)
+
+        if (state & 32):
+            self.rw(1)
+        else: 
+            self.rw(0)
+
+        if (state & 16):    
+            self.ex(1)
+        else: 
+            self.ex(0)
+
+        if (state & 8):
+            self.data1( 1)
+        else: 
+            self.data1(0)
+
+
+        if (state & 4):
+            self.data2(1)
+        else: 
+            self.data2(0)
+
+        if (state & 2): 
+            self.data3(1)
+        else: 
+            self.data3(0)
+
+        if (state & 1):
+            self.data4(1)
+        else: 
+            self.data4(0)
+
 
     def begin(self,cols, lines, dotsize): 
         totalChar = cols*lines
@@ -173,40 +246,42 @@ class LCD50530:
         self.write4bits(value<<4, controlpins)    
 
     def pulseExecute(self):
-        digitalWrite(self._ex_pin, HIGH)
+        self.ex(1)
         utime.sleep_us(2)
-        digitalWrite(self._ex_pin, LOW)
+        self.ex(0)
         utime.sleep_us(2)
 
-    def write4bits(self.value, controlpins):
-        self.PORTD = (value & B11110000) | controlpins
-        pulseExecute()
+    def write4bits(self, value, controlpins):
+        self.setPORTD(value & 0b11110000 | controlpins)
+        self.pulseExecute()
 
     def busyState():
         state = 0
-        self.DDRD = B00001111 # Set data pins to input
-        self.PORTD = 1<<_rw_pin
+        #self.DDRD = 0b00001111 # Set data pins to input
+        self.setDDRD(0b00001111)
+        self.setPORTD(1<<_rw_pin)
         
-        digitalWrite(_ex_pin, HIGH)
+        self.ex(1)
         utime.sleep_us(2)
-        state = digitalRead(_data_pins[3])
-        digitalWrite(_ex_pin, LOW)
-        utime.sleep_us(2)
-        
-        self.PORTD = 1<<_rw_pin
-        
-        digitalWrite(_ex_pin, HIGH)
-        utime.sleep_us(2)
-        state |= digitalRead(_data_pins[3])
-        digitalWrite(_ex_pin, LOW)
+        state = self.data_pins[3].value()
+        self.ex(0)
         utime.sleep_us(2)
         
-        self.DDRD = B11111111  # Reset pins to output
+        self.setPORTD(1<<_rw_pin)
+        
+        self.ex(1)
+        utime.sleep_us(2)
+        state |= self.data_pins[3].value()
+
+        self.ex(0)
+        utime.sleep_us(2)
+        self.setDDRD(0b11111111)
+        #self.DDRD = B11111111  # Reset pins to output
         return state
 
 #ioc1, ioc2, rw, ex, d4, d5, d6, d7
 
-lcd = LCD50530(6,7,5,4,3,2,1,0)
+lcd = LCD50530(16,5,4,0,2,14,12,13)
 lcd.begin(40,3,1)
 lcd.clear()
 lcd.home()
