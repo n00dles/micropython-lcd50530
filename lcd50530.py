@@ -182,8 +182,9 @@ class LCD50530:
         
         self.DDRD = B11111111  # Reset pins to output
         return state
+#ioc1, ioc2, rw, ex, d4, d5, d6, d7
 
-lcd = LCD50530(5,6,7,8,9,1,2,3)
+lcd = LCD50530(6,7,5,4,3,2,1,0)
 lcd.begin(40,3,1)
 lcd.clear()
 lcd.home()
