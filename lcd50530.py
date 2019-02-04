@@ -1,4 +1,6 @@
-#import utime 
+
+import utime
+import machine
 
 class LCD50530:
 
@@ -39,6 +41,7 @@ class LCD50530:
     LCD_DISPLAYMOVEWRITE = 0x02	# Update display address after writing RAM data
     LCD_CURSORMOVEREAD = 0x08		# Update cursor address after reading RAM data
     LCD_CURSORMOVEWRITE = 0x10	# Update cursor address after writing RAM data
+
     LCD_DISPLAYMOVERIGHT = 0x00	# Display address decremented after instruction
     LCD_DISPLAYMOVELEFT = 0x04	# Display address incremented after instruction
     LCD_CURSORMOVELEFT = 0x20		# Cursor address decremented after instruction
@@ -94,11 +97,26 @@ class LCD50530:
         self._data_pins[2] = d6
         self._data_pins[3] = d7 
 
-
+        self.setPins(1)
 
         #DDRD = B11111111     # Default: Set all ports to output (Atmel shortcut)    
 
         print (self._data_pins)
+
+    def setPins(self,state = 1):  
+        if (state==1):
+            state = machine.Pin.OUT
+        else: 
+            state = machine.Pin.IN
+        
+        self.ioc1 = machine.Pin(self._ioc1_pin, state)
+        self.ioc2 = machine.Pin(self._ioc2_pin, state)
+        self.rw = machine.Pin(self._rw_pin, state)
+        self.ex = machine.Pin(self._ex_pin, state)
+        self.data1 = machine.Pin(self._data_pins[0], state)
+        self.data2 = machine.Pin(self._data_pins[1], state)
+        self.data3 = machine.Pin(self._data_pins[2], state)
+        self.data4 = machine.Pin(self._data_pins[3], state)
 
     def begin(self,cols, lines, dotsize): 
         totalChar = cols*lines
@@ -125,19 +143,22 @@ class LCD50530:
             displaySize |= self.LCD_256CHAR
             _cols = 256/lines
         
+
         _functionmode = self.LCD_4BITMODE | self.LCD_5x8DOTS | displaySize
         self.command(self.LCD_FUNCTIONMODESET | _functionmode) 
         
         _displaymode = self.LCD_DISPLAYON
         self.command(self.LCD_DISPLAYMODESET | _displaymode)
 
+
         _entrymode = self.LCD_CURSORMOVEWRITE | self.LCD_CURSORMOVERIGHT
         self.command(self.LCD_ENTRYMODESET | _entrymode) 
         
         self.command(self.LCD_CLEARDISPLAY) 
 
-    def command(self,cmd):
-        print(cmd)
+    def command(self,value):
+        print(value)
+        self.send(value, 0)
 
     def clear(self):
         self.command(self.LCD_CLEARDISPLAY)
@@ -157,7 +178,7 @@ class LCD50530:
         digitalWrite(self._ex_pin, LOW)
         utime.sleep_us(2)
 
-    def write4bits(value, controlpins):
+    def write4bits(self.value, controlpins):
         self.PORTD = (value & B11110000) | controlpins
         pulseExecute()
 
@@ -182,6 +203,7 @@ class LCD50530:
         
         self.DDRD = B11111111  # Reset pins to output
         return state
+
 #ioc1, ioc2, rw, ex, d4, d5, d6, d7
 
 lcd = LCD50530(6,7,5,4,3,2,1,0)
