@@ -86,6 +86,7 @@ class LCD50530:
     _currline = 0
     _cols = 0
 
+    #lcd = LCD50530(15,5,4,0,2,14,12,13)
     def __init__(self,ioc1, ioc2, rw, ex, d4, d5, d6, d7):
         self._ioc1_pin = ioc1
         self._ioc2_pin = ioc2
@@ -103,95 +104,99 @@ class LCD50530:
 
         print (self._data_pins)
 
-    def setDDRD(self,state = 1):  
-        if (state==1):
-            state = machine.Pin.OUT
-        else: 
-            state = machine.Pin.IN
+    def setDDRD(self,state):  
         if (state & 128):
+            print("pin 8 out")
             self.ioc1 = machine.Pin(self._ioc1_pin, machine.Pin.OUT)
         else: 
             self.ioc1 = machine.Pin(self._ioc1_pin, machine.Pin.IN)
         
         if (state & 64):
+            print("pin 7 out")
             self.ioc2 = machine.Pin(self._ioc2_pin, machine.Pin.OUT)
         else:
             self.ioc2 = machine.Pin(self._ioc2_pin, machine.Pin.IN)
 
         if (state & 32):
+            print("pin 6 out")
             self.rw = machine.Pin(self._rw_pin, machine.Pin.OUT)
         else: 
             self.rw = machine.Pin(self._rw_pin, machine.Pin.IN)
 
-        if (state & 16):    
+        if (state & 16):
+            print("pin 5 out")
             self.ex = machine.Pin(self._ex_pin, machine.Pin.OUT)
         else: 
             self.ex = machine.Pin(self._ex_pin, machine.Pin.IN)
 
         if (state & 8):
+            print("pin 4 out")
             self.data1 = machine.Pin(self._data_pins[0], machine.Pin.OUT)
         else: 
             self.data1 = machine.Pin(self._data_pins[0], machine.Pin.IN)
 
         if (state & 4):
+            print("pin 3 out")
             self.data2 = machine.Pin(self._data_pins[1], machine.Pin.OUT)
         else: 
             self.data2 = machine.Pin(self._data_pins[1], machine.Pin.IN)
 
-        if (state & 2): 
+        if (state & 2):
+            print("pin 2 out") 
             self.data3 = machine.Pin(self._data_pins[2], machine.Pin.OUT)
         else: 
             self.data3 = machine.Pin(self._data_pins[2], machine.Pin.IN)
 
         if (state & 1):
+            print("pin 1 out")
             self.data4 = machine.Pin(self._data_pins[3], machine.Pin.OUT)
         else: 
             self.data4 = machine.Pin(self._data_pins[3], machine.Pin.IN)
 
-    def setPORTD(self,state = 1):  
+    def setPORTD(self,state ):  
         if (state & 128):
-            self.ioc1(1)
+            self.ioc1.value(1)
         else: 
-            self.ioc1(0)
+            self.ioc1.value(0)
         
         if (state & 64):
-            self.ioc2(1)
+            self.ioc2.value(1)
         else:
-            self.ioc2(0)
+            self.ioc2.value(0)
 
         if (state & 32):
-            self.rw(1)
+            self.rw.value(1)
         else: 
-            self.rw(0)
+            self.rw.value(0)
 
         if (state & 16):    
-            self.ex(1)
+            self.ex.value(1)
         else: 
-            self.ex(0)
+            self.ex.value(0)
 
         if (state & 8):
-            self.data1( 1)
+            self.data1.value( 1)
         else: 
-            self.data1(0)
+            self.data1.value(0)
 
 
         if (state & 4):
-            self.data2(1)
+            self.data2.value(1)
         else: 
-            self.data2(0)
+            self.data2.value(0)
 
         if (state & 2): 
-            self.data3(1)
+            self.data3.value(1)
         else: 
-            self.data3(0)
+            self.data3.value(0)
 
         if (state & 1):
-            self.data4(1)
+            self.data4.value(1)
         else: 
-            self.data4(0)
+            self.data4.value(0)
 
 
-    def begin(self,cols, lines, dotsize): 
+    def begin(self,cols, lines, dotsize = 0x10): 
         totalChar = cols*lines
 
         displaySize = 0x00
@@ -246,9 +251,9 @@ class LCD50530:
         self.write4bits(value<<4, controlpins)    
 
     def pulseExecute(self):
-        self.ex(1)
+        self.ex.value(1)
         utime.sleep_us(2)
-        self.ex(0)
+        self.ex.value(0)
         utime.sleep_us(2)
 
     def write4bits(self, value, controlpins):
@@ -259,21 +264,21 @@ class LCD50530:
         state = 0
         #self.DDRD = 0b00001111 # Set data pins to input
         self.setDDRD(0b00001111)
-        self.setPORTD(1<<_rw_pin)
+        self.setPORTD(1<<self.rw.value())
         
-        self.ex(1)
+        self.ex.value(1)
         utime.sleep_us(2)
-        state = self.data_pins[3].value()
-        self.ex(0)
+        state = self.data3.value()
+        self.ex.value(0)
         utime.sleep_us(2)
         
-        self.setPORTD(1<<_rw_pin)
+        self.setPORTD(1<<self.rw.value())
         
-        self.ex(1)
+        self.ex.value(1)
         utime.sleep_us(2)
-        state |= self.data_pins[3].value()
+        state |= self.data3.value()
 
-        self.ex(0)
+        self.ex.value(0)
         utime.sleep_us(2)
         self.setDDRD(0b11111111)
         #self.DDRD = B11111111  # Reset pins to output
@@ -281,7 +286,7 @@ class LCD50530:
 
 #ioc1, ioc2, rw, ex, d4, d5, d6, d7
 
-lcd = LCD50530(16,5,4,0,2,14,12,13)
+lcd = LCD50530(15,5,4,0,2,14,12,13)
 lcd.begin(40,3,1)
 lcd.clear()
 lcd.home()
